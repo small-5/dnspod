@@ -1,0 +1,3 @@
+部分源码来自于iLemonrain的AliDDNS，支持同一域名同时使用（A/AAAA记录），可以直接通过脚本添加不存在的解析记录。
+DnspodCN.sh为国内版，DnspodCOM.sh为国际版，TTL设置会读取解析记录原本的TTL，如果添加不存在的解析记录则默认设置为600的TTL，不支持手动指定TTL。
+在Ubuntu 18.04上测试通过，Centos有可能需要手动安装jq才能使用
