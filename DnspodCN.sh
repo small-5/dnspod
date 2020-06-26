@@ -1,5 +1,5 @@
 #!/bin/bash
-BuildTime=20200624
+BuildTime=20200626
 # 专家模式开关
 # 注意： 只有当你了解整个DnspodDDNS工作流程，并且有一定的动手能力，希望对DnspodDDNS脚本的更多参数进行
 #       深度定制时，你可以打开这个开关，会提供更多可以设置的选项，但如果你不懂、超级小白，请不要
@@ -272,14 +272,14 @@ EOF
 function_ServerChan_Configure(){
 	echo -e "\n${Msg_Info}请输入ServerChan SCKEY："
 	read -p "(此项必须填写):" ServerChan_SCKEY
-	while [ -z "${ServerChan_SCKEY}" ];do
+	while [ -z "$ServerChan_SCKEY" ];do
 		echo -e "${Msg_Error}此项不可为空，请重新填写"
 		echo -e "${Msg_Info}请输入ServerChan SCKEY："
 		read -p "(此项必须填写):" ServerChan_SCKEY
 	done
 	echo -e "\n${Msg_Info}请输入服务器名称：请使用中文/英文，不要使用除了英文下划线以外任何符号"
 	read -p "(此项必须填写，便于识别):" ServerChan_ServerFriendlyName
-	while [ -z "${ServerChan_ServerFriendlyName}" ];do
+	while [ -z "$ServerChan_ServerFriendlyName" ];do
 		echo -e "${Msg_Error}此项不可为空，请重新填写"
 		echo -e "${Msg_Info}请输入服务器名称：请使用中文/英文，不要使用除了英文下划线以外任何符号"
 		read -p "(此项必须填写，便于识别):" ServerChan_ServerFriendlyName
@@ -291,8 +291,36 @@ function_ServerChan_WriteConfig(){
 	echo -e "\n${Msg_Info}正在写入配置文件……"
 	mkdir -p $Config_configdir
 	cat>$Config_configdir/config-ServerChan-cn.cfg<<EOF
-ServerChan_ServerFriendlyName="${ServerChan_ServerFriendlyName}"
-ServerChan_SCKEY="${ServerChan_SCKEY}"
+ServerChan_ServerFriendlyName="$ServerChan_ServerFriendlyName"
+ServerChan_SCKEY="$ServerChan_SCKEY"
+EOF
+}
+
+function_Telegram_Configure(){
+	echo -e "\n${Msg_Info}请输入Telegram Bot URL："
+	read -p "(此项必须填写，查看帮助请输入h):" Telegram_URL
+	while [ -z "$Telegram_URL" -o "$Telegram_URL" = h ];do
+		[ "$Telegram_URL" = h ] && function_document_Telegram_URL
+		[ -z "$Telegram_URL" ] && echo -e "${Msg_Error}此项不可为空，请重新填写"
+		echo -e "${Msg_Info}请输入Telegram Bot URL："
+		read -p "(此项必须填写，查看帮助请输入h):" Telegram_URL
+	done
+	echo -e "\n${Msg_Info}请输入服务器名称：请使用中文/英文，不要使用除了英文下划线以外任何符号"
+	read -p "(此项必须填写，便于识别):" Telegram_ServerFriendlyName
+	while [ -z "$Telegram_ServerFriendlyName" ];do
+		echo -e "${Msg_Error}此项不可为空，请重新填写"
+		echo -e "${Msg_Info}请输入服务器名称：请使用中文/英文，不要使用除了英文下划线以外任何符号"
+		read -p "(此项必须填写，便于识别):" Telegram_ServerFriendlyName
+	done
+}
+
+function_Telegram_WriteConfig(){
+	# 写入配置文件
+	echo -e "\n${Msg_Info}正在写入配置文件……"
+	mkdir -p $Config_configdir
+	cat>$Config_configdir/config-Telegram-cn.cfg<<EOF
+Telegram_ServerFriendlyName="$Telegram_ServerFriendlyName"
+Telegram_URL="$Telegram_URL"
 EOF
 }
 
@@ -342,6 +370,13 @@ function_document_Dnspod_DNS(){
 默认使用8.8.8.8进行查询${Font_Suffix}"
 }
 
+function_document_Telegram_URL(){
+	echo -e "${Msg_Info}${Font_Green}Telegram Bot URL 说明
+这个参数设置用于Telegram Bot推送的URL。
+获取URL请移步：
+https://t.me/notificationme_bot${Font_Suffix}"
+}
+
 # 获取本机IP
 function_Dnspod_GetLocalIP(){
 	echo -e "${Msg_Info}正在获取本机IP……"
@@ -351,9 +386,9 @@ function_Dnspod_GetLocalIP(){
 		exit 1
 	fi
 	local __CNT=0
-	while ! __Local_IP=`$__Local_IP_BIN`;do
-		__ERR=$?
-		echo -e "${Msg_Error}未能获取本机IP！cURL 错误代码: [$__ERR]"
+	while :;do
+		__Local_IP=`$__Local_IP_BIN` && break
+		echo -e "${Msg_Error}未能获取本机IP！命令返回错误代码: [$?]"
 		__CNT=$(( $__CNT + 1 ))
 		[ $retry_count -gt 0 -a $__CNT -gt $retry_count ] && echo -e "${Msg_Warning}第$retry_count次重新获取IP失败，程序退出……" && exit 1
 		echo -e "${Msg_Warning}获取IP失败 - 在$retry_seconds秒后进行第$__CNT次重试"
@@ -442,13 +477,13 @@ update_domain(){
 
 # 如果你有动手能力，可以尝试定制ServerChan推送的消息内容
 function_ServerChan_SuccessMsgPush(){
-	ServerChan_ServerFriendlyName=`sed '/^ServerChan_ServerFriendlyName=/!d;s/.*=//' $Config_configdir/config-ServerChan-cn.cfg | sed 's/\"//g'`
-	ServerChan_SCKEY=`sed '/^ServerChan_SCKEY=/!d;s/.*=//' $Config_configdir/config-ServerChan-cn.cfg | sed 's/\"//g'`
+	ServerChan_ServerFriendlyName=`sed '/^ServerChan_ServerFriendlyName=/!d;s/.*=//' $Config_configdir/config-ServerChan-cn.cfg 2>/dev/null | sed 's/\"//g'`
+	ServerChan_SCKEY=`sed '/^ServerChan_SCKEY=/!d;s/.*=//' $Config_configdir/config-ServerChan-cn.cfg 2>/dev/null | sed 's/\"//g'`
 	if [ -n "$ServerChan_ServerFriendlyName" ] && [ -n "$ServerChan_SCKEY" ];then
 		echo -e "${Msg_Info}检测到ServerChan配置，正在推送消息到ServerChan平台……"
 		ServerChan_Text="服务器IP发生变动_Dnspod(国内版)"
-		ServerChan_Content="服务器：${ServerChan_ServerFriendlyName}，新的IP为：$__Local_IP，请注意服务器状态"
-		while ! __TMP=`curl -Ss -d "&desp=${ServerChan_Content}" https://sc.ftqq.com/$ServerChan_SCKEY.send?text=$ServerChan_Text 2>&1`;do
+		ServerChan_Content="服务器：${ServerChan_ServerFriendlyName}，新的IP为：${__Local_IP}，请注意服务器状态"
+		while ! __TMP=`curl -m 5 -Ssd "&desp=$ServerChan_Content" https://sc.ftqq.com/$ServerChan_SCKEY.send?text=$ServerChan_Text 2>&1`;do
 			echo -e "${Msg_Error}ServerChan 推送失败 (cURL 错误信息: [$__TMP])"
 			__CNT=$(( $__CNT + 1 ))
 			[ $retry_count -gt 0 -a $__CNT -gt $retry_count ] && echo -e "${Msg_Warning}第$retry_count次重试失败，程序退出……" && exit 1
@@ -459,9 +494,29 @@ function_ServerChan_SuccessMsgPush(){
 	fi
 }
 
+# 如果你有动手能力，可以尝试定制Telegram推送的消息内容
+function_Telegram_SuccessMsgPush(){
+	Telegram_ServerFriendlyName=`sed '/^Telegram_ServerFriendlyName=/!d;s/.*=//' $Config_configdir/config-Telegram-cn.cfg 2>/dev/null | sed 's/\"//g'`
+	Telegram_URL=`sed '/^Telegram_URL=/!d;s/.*=//' $Config_configdir/config-Telegram-cn.cfg 2>/dev/null | sed 's/\"//g'`
+	if [ -n "$Telegram_ServerFriendlyName" ] && [ -n "$Telegram_URL" ];then
+		echo -e "${Msg_Info}检测到Telegram配置，正在推送消息到Telegram平台……"
+		Telegram_Text="服务器：${Telegram_ServerFriendlyName}，新的IP为：${__Local_IP}，请注意服务器状态"
+		while :;do
+			__TMP=`curl -m 5 -Ssd "text=$Telegram_Text" $Telegram_URL 2>&1` && break
+			[ $? = 52 ] && echo -e "${Msg_Error}Telegram URL设置错误，程序退出……" && exit 1
+			echo -e "${Msg_Error}Telegram Bot 推送失败 (cURL 错误信息: [$__TMP])"
+			__CNT=$(( $__CNT + 1 ))
+			[ $retry_count -gt 0 -a $__CNT -gt $retry_count ] && echo -e "${Msg_Warning}第$retry_count次重试失败，程序退出……" && exit 1
+			echo -e "${Msg_Warning}传输失败 - 在$retry_seconds秒后进行第$__CNT次重试"
+			sleep $retry_seconds
+		done
+		echo -e "$([ "$(echo $__TMP | jq -r .result.body.ok)" = true ] && echo ${Msg_Success}Telegram Bot 成功推送 || echo ${Msg_Error}Telegram Bot返回信息:[`echo $__TMP | jq -r .result.body.description`])"
+	fi
+}
+
 # 获取域名解析记录
 describe_domain(){
-	__CMDBASE="curl -Ss -d"
+	__CMDBASE="curl -Ssd"
 	__URLBASE="https://dnsapi.cn"
 	ret=0
 	__POST="login_token=$__ID,$__KEY&format=json&domain=$__DOMAIN&sub_domain=$__HOST"
@@ -491,7 +546,8 @@ describe_domain(){
 	elif [ $ret = 2 ];then
 		sleep 3
 		update_domain
-		[ -f $Config_configdir/config-ServerChan-cn.cfg ] && function_ServerChan_SuccessMsgPush
+		function_ServerChan_SuccessMsgPush
+		function_Telegram_SuccessMsgPush
 	else
 		echo -e "${Msg_Success}解析记录不需要更新: [解析记录IP:$__RECIP] [本地IP:$__Local_IP]"
 	fi
@@ -537,7 +593,16 @@ Entrance_ServerChan_Config(){
 	function_Check_Enviroment
 	function_ServerChan_Configure
 	function_ServerChan_WriteConfig
-	echo -e "${Msg_Success}配置文件写入完成，重新执行脚本即可激活ServerChan功能"
+	echo -e "${Msg_Success}配置文件写入完成，重新执行脚本即可激活ServerChan推送功能"
+	exit 0
+}
+
+Entrance_Telegram_Config(){
+	function_Check_Root
+	function_Check_Enviroment
+	function_Telegram_Configure
+	function_Telegram_WriteConfig
+	echo -e "${Msg_Success}配置文件写入完成，重新执行脚本即可激活Telegram推送功能"
 	exit 0
 }
 
@@ -547,6 +612,8 @@ Entrance_Global_CleanEnv(){
 	rm -f ~/OneKeyDnspod/config-cn.cfg
 	rm -f /etc/OneKeyDnspod/config-ServerChan-cn.cfg
 	rm -f ~/OneKeyDnspod/config-ServerChan-cn.cfg
+	rm -f /etc/OneKeyDnspod/config-Telegram-cn.cfg
+	rm -f ~/OneKeyDnspod/config-Telegram-cn.cfg
 	echo -e "${Msg_Success}环境清理完成，重新执行脚本以开始配置"
 	exit 0
 }
@@ -558,6 +625,15 @@ Entrance_ServerChan_CleanEnv(){
 	echo -e "${Msg_Success}ServerChan配置清理完成，重新执行脚本以开始配置"
 	exit 0
 }
+
+Entrance_Telegram_CleanEnv(){
+	echo -e "${Msg_Info}正在清理Telegram配置……"
+	rm -f /etc/OneKeyDnspod/config-Telegram-cn.cfg
+	rm -f ~/OneKeyDnspod/config-Telegram-cn.cfg
+	echo -e "${Msg_Success}Telegram配置清理完成，重新执行脚本以开始配置"
+	exit 0
+}
+
 Entrance_Version(){
 	echo -e "
 # DnspodDDNS 工具 (Dnspod国内版云解析修改工具)
@@ -570,31 +646,27 @@ Entrance_Version(){
 }
 
 case "$1" in
-	run)
-		Entrance_Dnspod_RunOnly;;
-	config)
-		Entrance_Dnspod_ConfigureOnly;;
-	clean)
-		Entrance_Global_CleanEnv;;
-	clean_chan)
-		Entrance_ServerChan_CleanEnv;;
-	version)
-		Entrance_Version;;
-	*)
-		echo -e "${Font_Blue} DnspodDDNS 工具 (Dnspod国内版云解析修改工具)${Font_Suffix}
+	run)Entrance_Dnspod_RunOnly;;
+	config)Entrance_Dnspod_ConfigureOnly;;
+	clean)Entrance_Global_CleanEnv;;
+	clean_chan)Entrance_ServerChan_CleanEnv;;
+	clean_tg)Entrance_Telegram_CleanEnv;;
+	version)Entrance_Version;;
+	*)echo -e "${Font_Blue} DnspodDDNS 工具 (Dnspod国内版云解析修改工具)${Font_Suffix}
 
 使用方法 (Usage)：
 $0 run             配置并运行工具 (如果已有配置将会直接运行)
 $0 config          仅配置工具
 $0 clean           清理配置文件及运行环境
 $0 clean_chan      清理ServerChan配置文件
+$0 clean_tg        清理Telegram配置文件
 $0 version         显示版本信息
 
 ";;
 esac
 
 echo -e "${Msg_Info}选择你要使用的功能: "
-echo -e " 1. 配置并运行 DnspodDDNS(国内版) \n 2. 仅配置 DnspodDDNS(国内版) \n 3. 仅运行 DnspodDDNS(国内版) \n 4. 配置ServerChan微信推送 \n 5. 清理环境 \n 6. 清理ServerChan配置文件 \n 0. 退出 \n"
+echo -e " 1. 配置并运行 DnspodDDNS(国内版) \n 2. 仅配置 DnspodDDNS(国内版) \n 3. 仅运行 DnspodDDNS(国内版) \n 4. 配置ServerChan微信推送 \n 5. 配置Telegram推送 \n 6. 清理环境 \n 7. 清理ServerChan配置文件 \n 8. 清理Telegram配置文件 \n 0. 退出 \n"
 read -p "输入数字以选择:" Function
 
 if [ "${Function}" = 1 ];then
@@ -606,9 +678,13 @@ elif [ "${Function}" = 3 ];then
 elif [ "${Function}" = 4 ];then
 	Entrance_ServerChan_Config
 elif [ "${Function}" = 5 ];then
-	Entrance_Global_CleanEnv
+	Entrance_Telegram_Config
 elif [ "${Function}" = 6 ];then
+	Entrance_Global_CleanEnv
+elif [ "${Function}" = 7 ];then
 	Entrance_ServerChan_CleanEnv
+elif [ "${Function}" = 8 ];then
+	Entrance_Telegram_CleanEnv
 else
 	exit 0
 fi
